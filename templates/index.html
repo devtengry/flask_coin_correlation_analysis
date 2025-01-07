@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coin Correlation Analysis</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Coin Correlation Analysis</h1>
+
+        <!-- Download Data Form -->
+        <form id="downloadForm">
+            <div class="mb-3">
+                <label for="day" class="form-label">Days Ago</label>
+                <input type="number" class="form-control" id="day" name="day" placeholder="Enter days ago" required>
+            </div>
+            <div class="mb-3">
+                <label for="period" class="form-label">Period</label>
+                <select class="form-control" id="period" name="period" required>
+                    <option value="1h">1 Hour</option>
+                    <option value="1d">1 Day</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Download Data</button>
+        </form>
+        <div id="downloadMessage" class="mt-3"></div>
+
+        <hr>
+
+        <!-- Find Correlation Form -->
+        <h2>Find Top Correlated Coins</h2>
+        <form id="correlationForm">
+            <div class="mb-3">
+                <label for="coin" class="form-label">Coin Symbol</label>
+                <input type="text" class="form-control" id="coin" name="coin" placeholder="Enter coin symbol (e.g., BTC)" required>
+            </div>
+            <button type="submit" class="btn btn-success">Find Correlations</button>
+        </form>
+        <div id="correlationResults" class="mt-4"></div>
+
+        <hr>
+
+        <!-- Plot Correlation Form -->
+        <h2>Plot Coin Correlation</h2>
+        <form id="plotForm">
+            <div class="row">
+                <div class="col-md-6">
+                    <label for="coin1" class="form-label">Coin 1</label>
+                    <input type="text" class="form-control" id="coin1" name="coin1" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label for="coin2" class="form-label">Coin 2</label>
+                    <input type="text" class="form-control" id="coin2" name="coin2" placeholder="Enter second coin symbol" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-info mt-3">Generate Plot</button>
+        </form>
+        <div id="plotMessage" class="mt-3"></div>
+
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+            // Handle Download Data Form Submission
+            $("#downloadForm").submit(function(event) {
+                event.preventDefault();
+                const formData = $(this).serialize();
+                $.post("/download", formData, function(response) {
+                    $("#downloadMessage").html(
+                        `<div class="alert alert-success">Data downloaded successfully!</div>`
+                    );
+                }).fail(function(xhr) {
+                    const error = JSON.parse(xhr.responseText);
+                    $("#downloadMessage").html(
+                        `<div class="alert alert-danger">${error.error}</div>`
+                    );
+                });
+            });
+
+            // Handle Correlation Form Submission
+            $("#correlationForm").submit(function(event) {
+                event.preventDefault();
+                const formData = $(this).serialize();
+                $.post("/correlation", formData, function(data) {
+                    let results = `<h3>Top Correlations for ${data.coin}</h3><ul>`;
+                    data.top_correlations.forEach(([coin, correlation]) => {
+                        results += `<li><a href="#" class="correlation-link" data-coin="${coin}">${coin}: ${(correlation * 100).toFixed(2)}%</a></li>`;
+                    });
+                    results += `</ul>`;
+                    $("#correlationResults").html(results);
+                }).fail(function(xhr) {
+                    const error = JSON.parse(xhr.responseText);
+                    $("#correlationResults").html(`<div class='alert alert-danger'>${error.error}</div>`);
+                });
+            });
+
+            // Handle Coin Click for Correlation Plot
+            $(document).on("click", ".correlation-link", function(event) {
+                event.preventDefault();
+                const coin1 = $(this).data("coin");
+                $("#coin1").val(coin1);
+                $("#plotForm").submit();
+            });
+
+            // Handle Plot Form Submission
+            $("#plotForm").submit(function(event) {
+                event.preventDefault();
+                const formData = $(this).serialize();
+                $.post("/plot", formData, function(response) {
+                    $("#plotMessage").html(
+                        `<div class="alert alert-success"><img src="/static/output.png" alt="Correlation Plot" class="img-fluid mt-3"></div>`
+                    );
+                }).fail(function(xhr) {
+                    const error = JSON.parse(xhr.responseText);
+                    $("#plotMessage").html(
+                        `<div class="alert alert-danger">${error.error}</div>`
+                    );
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>
